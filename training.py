@@ -38,6 +38,8 @@ class Trainer():
                 # Update model
                 self.optimizer.zero_grad()
                 predicted = self.representation(coordinates)
+                #predictes.append(predicted.cpu().detach().numpy())
+                #labels.append(coordinates.detach().cpu().numpy())
                 loss = self.loss_func(predicted, features)
                 loss.backward()
                 self.optimizer.step()
@@ -63,3 +65,5 @@ class Trainer():
                     if i > int(num_iters / 2.):
                         for k, v in self.representation.state_dict().items():
                             self.best_model[k].copy_(v)
+            return predicted
+    

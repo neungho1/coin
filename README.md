@@ -33,7 +33,7 @@ To reproduce the results from the paper, run the architectures listed in Appendi
 ```
 python main.py -ld logs_dir -fd --num_layers 5 --layer_size 20
 python main.py -ld logs_dir -fd --num_layers 5 --layer_size 30
-python main.py -ld logs_dir -fd --num_layers 10 --layer_size 28
+python main.py -ld logs_dir -fd --num_layers 10 --layer_size 2840
 python main.py -ld logs_dir -fd --num_layers 10 --layer_size 40
 python main.py -ld logs_dir -fd --num_layers 13 --layer_size 49
 ```

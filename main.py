@@ -14,7 +14,7 @@ from training import Trainer
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-ld", "--logdir", help="Path to save logs", default=f"/tmp/{getpass.getuser()}")
-parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=50000)
+parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=1000)
 parser.add_argument("-lr", "--learning_rate", help="Learning rate", type=float, default=2e-4)
 parser.add_argument("-se", "--seed", help="Random seed", type=int, default=random.randint(1, int(1e6)))
 parser.add_argument("-fd", "--full_dataset", help="Whether to use full dataset", action='store_true')
@@ -52,9 +52,9 @@ for i in range(min_id, max_id + 1):
     print(f'Image {i}')
 
     # Load image
-    img = imageio.imread(f"kodak-dataset/kodim{str(i).zfill(2)}.png")
+    img = imageio.imread(f"/workspace/eunho/BTech_Dataset_transformed/01/train/ok/0000.bmp")
     img = transforms.ToTensor()(img).float().to(device, dtype)
-
+    print(img.size())
     # Setup model
     func_rep = Siren(
         dim_in=2,
@@ -94,8 +94,9 @@ for i in range(min_id, max_id + 1):
     # Save full precision image reconstruction
     with torch.no_grad():
         img_recon = func_rep(coordinates).reshape(img.shape[1], img.shape[2], 3).permute(2, 0, 1)
-        save_image(torch.clamp(img_recon, 0, 1).to('cpu'), args.logdir + f'/fp_reconstruction_{i}.png')
-
+        print(img_recon.size())
+        save_image(torch.clamp(img_recon, 0, 1).to('cpu'), args.logdir + f'/1fp_reconstruction_{i}.png')
+        print(img_recon.size())
     # Convert model and coordinates to half precision. Note that half precision
     # torch.sin is only implemented on GPU, so must use cuda
     if torch.cuda.is_available():
@@ -111,7 +112,8 @@ for i in range(min_id, max_id + 1):
         with torch.no_grad():
             img_recon = func_rep(coordinates).reshape(img.shape[1], img.shape[2], 3).permute(2, 0, 1).float()
             hp_psnr = util.get_clamped_psnr(img_recon, img)
-            save_image(torch.clamp(img_recon, 0, 1).to('cpu'), args.logdir + f'/hp_reconstruction_{i}.png')
+            print(torch.clamp(img_recon, 0, 1).to('cpu').size)
+            save_image(torch.clamp(img_recon, 0, 1).to('cpu'), args.logdir + f'/1hp_reconstruction_{i}.png')
             print(f'Half precision psnr: {hp_psnr:.2f}')
             results['hp_psnr'].append(hp_psnr)
     else:
@@ -137,3 +139,61 @@ with open(args.logdir + f'/results_mean.json', 'w') as f:
 print('Aggregate results:')
 print(f'Full precision, bpp: {results_mean["fp_bpp"]:.2f}, psnr: {results_mean["fp_psnr"]:.2f}')
 print(f'Half precision, bpp: {results_mean["hp_bpp"]:.2f}, psnr: {results_mean["hp_psnr"]:.2f}')
+
+
+import numpy as np
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import precision_recall_curve
+import torch.nn.functional as F
+#image load
+
+thres = 0.5
+
+# 원본 이미지 로드 및 텐서로 변환
+img = imageio.imread(f"/workspace/eunho/BTech_Dataset_transformed/01/test/ko/0000.bmp")
+img = transforms.ToTensor()(img).float().to(device, dtype)
+
+# 이미지 재구성
+with torch.no_grad():
+    img_recon = func_rep(coordinates).reshape(img.shape[1], img.shape[2], 3).permute(2, 0, 1).to(device)
+    img_recon_cpu = img_recon.cpu().detach().numpy()
+
+# 손실 계산
+loss = F.mse_loss(img_recon, img, reduction='mean')
+mask_score_t = []
+normalised_score_t = []
+## PRO Score
+# 그라운드 트루스 마스크 로드 및 텐서로 변환
+mask_score_t.append(j.squeeze(0).squeeze(0).cpu().numpy()) # Storing all masks
+m = torch.nn.UpsamplingBilinear2d((512,512))
+norm_score = loss[-1].reshape(-1,1,512//patch_size,512//patch_size)
+score_map = m(torch.tensor(norm_score))
+score_map = Filter(score_map , type =0) 
+
+                   
+normalised_score_t.append(score_map)
+
+# 재구성된 이미지에 임계값 적용
+img_recon_thresholded = (img_recon_cpu > thres).astype(np.float32)
+
+# 손실을 사용하여 PRO 점수 계산
+scores = np.asarray(loss.cpu()).flatten()
+masks = mask_cpu.flatten()
+PRO_score = roc_auc_score(masks, scores)
+print("PRO Score:", PRO_score)
+    
+## Image Anomaly Classification Score (AUC)
+#roc_data = np.concatenate((t_loss_all_normal, t_loss_all_anomaly))
+#roc_targets = np.concatenate((np.zeros(len(t_loss_all_normal)), np.ones(len(t_loss_all_anomaly))))
+#AUC_Score_total = roc_auc_score(roc_targets, roc_data)
+    
+# AUC Precision Recall Curve
+#precision, recall, thres = precision_recall_curve(roc_targets, roc_data)
+#AUC_PR = auc(recall, precision)
+
+    
+#return PRO_score, AUC_Score_total, AUC_PR
+
+
+
