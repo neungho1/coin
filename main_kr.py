@@ -50,8 +50,9 @@ if not os.path.exists(args.logdir):
 import mvtechinr
 prdt = "01"
 patch_size = 64
-batch_size = 400
+batch_size = 8 #이 수만큼 for j, m in data.train_loader: 문장 반복
 results = {'fp_bpp': [], 'hp_bpp': [], 'fp_psnr': [], 'hp_psnr': []}
+
 #Dataset
 data = mvtechinr.Mvtec(batch_size,product=prdt)
 loader = [data.train_loader,data.test_norm_loader,data.test_anom_loader]

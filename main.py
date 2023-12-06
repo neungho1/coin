@@ -59,7 +59,7 @@ for i in range(min_id, max_id + 1):
     func_rep = Siren(
         dim_in=2,
         dim_hidden=args.layer_size,
-        dim_out=3,
+        dim_out=6,
         num_layers=args.num_layers,
         final_activation=torch.nn.Identity(),
         w0_initial=args.w0_initial,
@@ -78,7 +78,8 @@ for i in range(min_id, max_id + 1):
     print(f'Full precision bpp: {fp_bpp:.2f}')
 
     # Train model in full precision
-    trainer.train(coordinates, features, num_iters=args.num_iters)
+    pre =trainer.train(coordinates, features, num_iters=args.num_iters)
+    print("----------------",pre.size(),"-------------------")
     print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
 
     # Log full precision results

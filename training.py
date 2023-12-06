@@ -18,7 +18,7 @@ class Trainer():
         self.optimizer = torch.optim.Adam(self.representation.parameters(), lr=lr)
         self.print_freq = print_freq
         self.steps = 0  # Number of steps taken in training
-        self.loss_func = torch.nn.MSELoss()
+        self.loss_func = torch.nn.GaussianNLLLoss()
         self.best_vals = {'psnr': 0.0, 'loss': 1e8}
         self.logs = {'psnr': [], 'loss': []}
         # Store parameters of best model (in terms of highest PSNR achieved)
@@ -40,7 +40,15 @@ class Trainer():
                 predicted = self.representation(coordinates)
                 #predictes.append(predicted.cpu().detach().numpy())
                 #labels.append(coordinates.detach().cpu().numpy())
-                loss = self.loss_func(predicted, features)
+
+                # features를 평균과 로그-분산으로 변경
+                target_mean = features[:, :self.representation.output_dim]
+                target_log_var = features[:, self.representation.output_dim:]
+
+                # 분산은 표준편차의 제곱이므로, 로그 분산에서 지수를 취하고 제곱합니다.
+                target_var = torch.exp(target_log_var)**2
+
+                loss = self.loss_func(target_mean ,coordinates, target_var)
                 loss.backward()
                 self.optimizer.step()
 
