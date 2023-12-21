@@ -1,0 +1,54 @@
+def to_coordinates_and_features(img):
+    """Converts an image to a set of coordinates and features.
+
+    Args:
+        img (torch.Tensor): Shape (channels, height, width).
+    """
+    # Coordinates are indices of all non zero locations of a tensor of ones of
+    # same shape as spatial dimensions of image
+    coordinates = torch.ones(img.shape[1:]).nonzero(as_tuple=False).float()
+    # Normalize coordinates to lie in [-.5, .5]
+    coordinates = coordinates / (img.shape[1] - 1) - 0.5
+    # Convert to range [-1, 1]
+    coordinates *= 2
+    # Convert image to a tensor of features of shape (num_points, channels)
+    features = img.reshape(img.shape[0], -1).T
+    return coordinates, features
+
+print(coordinates.size(), features.size())
+torch.Size([2560000, 2]) torch.Size([2560000, 3])
+
+
+
+                #print(predicted.size())
+                #predictes.append(predicted.cpu().detach().numpy())
+                #labels.append(coordinates.detach().cpu().numpy())
+
+                # features를 평균과 로그-분산으로 변경
+                #target_mean = features[:, :self.representation.output_dim]
+                #target_var = features[:, 3:]
+                #print(target_mean.size(),coordinates.size(),target_var.size())
+                # 분산은 표준편차의 제곱이므로, 로그 분산에서 지수를 취하고 제곱합니다.
+                #print(target_var)
+                #target_var = target_var.squeeze()
+                #print(target_mean.size(),coordinates.size(),target_var.size())
+                #loss = self.loss_func(target_mean ,coordinates, target_var)
+
+
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir -iid 1 --num_layers 13 --layer_size 49
+n_itler =10000
+train data_len = 5
+img : 3,3 
+
+
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir -iid 1 --num_layers 13 --layer_size 49
+n_itler =10000
+train data_len = 100
+img : test_1,1
+
+    for j in range(100):
+        if j < 100:
+            num = j+100
+            img = imageio.imread(f"/workspace/eunho/BTech_Dataset_transformed/01/train/ok/{num:04d}.bmp")
+            img = transforms.ToTensor()(img).float().to(device, dtype)
+            img_list.append(img)

@@ -2,7 +2,7 @@ import torch
 import tqdm
 from collections import OrderedDict
 from util import get_clamped_psnr
-
+from torch.nn import GaussianNLLLoss
 
 class Trainer():
     def __init__(self, representation, lr=1e-3, print_freq=1):
@@ -18,7 +18,7 @@ class Trainer():
         self.optimizer = torch.optim.Adam(self.representation.parameters(), lr=lr)
         self.print_freq = print_freq
         self.steps = 0  # Number of steps taken in training
-        self.loss_func = torch.nn.GaussianNLLLoss()
+        self.loss_func =  GaussianNLLLoss()
         self.best_vals = {'psnr': 0.0, 'loss': 1e8}
         self.logs = {'psnr': [], 'loss': []}
         # Store parameters of best model (in terms of highest PSNR achieved)
@@ -37,23 +37,30 @@ class Trainer():
             for i in t:
                 # Update model
                 self.optimizer.zero_grad()
-                predicted = self.representation(coordinates)
+                #print(self.representation(coordinates))
+                predicted = self.representation(coordinates[i%100])
+                #print(predicted.size())
                 #predictes.append(predicted.cpu().detach().numpy())
                 #labels.append(coordinates.detach().cpu().numpy())
-
                 # features를 평균과 로그-분산으로 변경
-                target_mean = features[:, :self.representation.output_dim]
-                target_log_var = features[:, self.representation.output_dim:]
-
+                #target_mean = features[:, :self.representation.output_dim]
+                #target_var = features[:, 3:]
+                #print(target_mean.size(),coordinates.size(),target_var.size())
                 # 분산은 표준편차의 제곱이므로, 로그 분산에서 지수를 취하고 제곱합니다.
-                target_var = torch.exp(target_log_var)**2
+                #print(target_var)
+                #target_var = target_var.squeeze()
+                #print(target_mean.size(),coordinates.size(),target_var.size())
+                #loss = self.loss_func(target_mean ,coordinates, target_var)
 
-                loss = self.loss_func(target_mean ,coordinates, target_var)
+                #print(predicted_mean.size(),predicted_std.size(), features.size())
+                predicted_mean, predicted_std = torch.split(predicted, 3, dim=1)
+                var = torch.square(predicted_std)
+                loss = self.loss_func(predicted_mean,features[i%100],var)
                 loss.backward()
                 self.optimizer.step()
 
                 # Calculate psnr
-                psnr = get_clamped_psnr(predicted, features)
+                psnr = get_clamped_psnr(predicted_mean, features[i%100])
 
                 # Print results and update logs
                 log_dict = {'loss': loss.item(),
@@ -73,5 +80,5 @@ class Trainer():
                     if i > int(num_iters / 2.):
                         for k, v in self.representation.state_dict().items():
                             self.best_model[k].copy_(v)
-            return predicted
+            
     

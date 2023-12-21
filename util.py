@@ -34,6 +34,7 @@ def to_coordinates_and_features(img):
     Args:
         img (torch.Tensor): Shape (channels, height, width).
     """
+
     # Coordinates are indices of all non zero locations of a tensor of ones of
     # same shape as spatial dimensions of image
     coordinates = torch.ones(img.shape[1:]).nonzero(as_tuple=False).float()

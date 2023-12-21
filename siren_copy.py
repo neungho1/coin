@@ -19,18 +19,6 @@ class Sine(nn.Module):
 
 
 class SirenLayer(nn.Module):
-    """Implements a single SIREN layer.
-
-    Args:
-        dim_in (int): Dimension of input.
-        dim_out (int): Dimension of output.
-        w0 (float):
-        c (float): c value from SIREN paper used for weight initialization.
-        is_first (bool): Whether this is first layer of model.
-        use_bias (bool):
-        activation (torch.nn.Module): Activation function. If None, defaults to
-            Sine activation.
-    """
     def __init__(self, dim_in, dim_out, w0=30., c=6., is_first=False,
                  use_bias=True, activation=None):
         super().__init__()
@@ -39,7 +27,6 @@ class SirenLayer(nn.Module):
 
         self.linear = nn.Linear(dim_in, dim_out, bias=use_bias)
 
-        # Initialize layers following SIREN paper
         w_std = (1 / dim_in) if self.is_first else (sqrt(c / dim_in) / w0)
         nn.init.uniform_(self.linear.weight, -w_std, w_std)
         if use_bias:
@@ -52,20 +39,7 @@ class SirenLayer(nn.Module):
         out = self.activation(out)
         return out
 
-
 class Siren(nn.Module):
-    """SIREN model.
-
-    Args:
-        dim_in (int): Dimension of input.
-        dim_hidden (int): Dimension of hidden layers.
-        dim_out (int): Dimension of output.
-        num_layers (int): Number of layers.
-        w0 (float): Omega 0 from SIREN paper.
-        w0_initial (float): Omega 0 for first layer.
-        use_bias (bool):
-        final_activation (torch.nn.Module): Activation function.
-    """
     def __init__(self, dim_in, dim_hidden, dim_out, num_layers, w0=30.,
                  w0_initial=30., use_bias=True, final_activation=None):
         super().__init__()
@@ -85,10 +59,13 @@ class Siren(nn.Module):
 
         self.net = nn.Sequential(*layers)
 
+        # 출력 차원을 조정하여 각 채널의 평균과 표준편차를 예측하도록 함
         final_activation = nn.Identity() if final_activation is None else final_activation
-        self.last_layer = SirenLayer(dim_in=dim_hidden, dim_out=dim_out, w0=w0,
+        self.mean_std_layer = SirenLayer(dim_in=dim_hidden, dim_out=dim_out, w0=w0,
                                 use_bias=use_bias, activation=final_activation)
+
 
     def forward(self, x):
         x = self.net(x)
-        return self.last_layer(x)
+        mean_std_output = self.mean_std_layer(x)
+        return mean_std_output
