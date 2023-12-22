@@ -52,3 +52,79 @@ img : test_1,1
             img = imageio.imread(f"/workspace/eunho/BTech_Dataset_transformed/01/train/ok/{num:04d}.bmp")
             img = transforms.ToTensor()(img).float().to(device, dtype)
             img_list.append(img)
+
+
+-threshold = 0.5-
+1
+mask = (img_recon_mean - 4 * img_recon_std > img) | (img_recon_mean + 4 * img_recon_std < img)
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 40
+n_itler =100
+Segmentation AUROC: 0.5294538710321872
+
+2
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 28
+n_itler =500
+Segmentation AUROC: 0.5547740694151255
+
+3
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 28
+n_itler =1000
+Segmentation AUROC: 0.5111764228042921
+
+-threshold = 0-
+
+4
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 28
+n_itler =1000
+Segmentation AUROC: 0.5184740413780143
+
+5
+mask = (img_recon_mean - 3 * img_recon_std > img) | (img_recon_mean + 3 * img_recon_std < img)
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 40
+n_itler =100
+Segmentation AUROC: 0.5369367709085546
+
+6
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =100
+Segmentation AUROC: 0.5022283184024208
+
+7
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =200
+Segmentation AUROC: 0.5472776630220859
+
+
+8
+-threshold = 0.5-
+mask = (img_recon_mean - 3 * img_recon_std > img) | (img_recon_mean + 3 * img_recon_std < img)
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 28
+n_itler =200
+Segmentation AUROC: 0.5370912595870962
+
+9
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 10 --layer_size 28
+n_itler =500
+Segmentation AUROC: 0.5065705208747903
+
+10
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =250
+Segmentation AUROC: 0.5216201893686836
+
+11
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =300
+Segmentation AUROC: 0.5418438140990862
+
+12
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =350
+Segmentation AUROC: 0.5386317830803209
+
+13
+CUDA_VISIBLE_DEVICES=2 python main.py -ld logs_dir --num_layers 13 --layer_size 49
+n_itler =400
+Segmentation AUROC: 0.5
+teray2
+Segmentation AUROC: 0.5434461228918196

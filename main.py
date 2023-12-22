@@ -14,7 +14,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-ld", "--logdir", help="Path to save logs", default=f"/tmp/{getpass.getuser()}")
-parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=100)
+parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=500)
 parser.add_argument("-lr", "--learning_rate", help="Learning rate", type=float, default=2e-4)
 parser.add_argument("-se", "--seed", help="Random seed", type=int, default=random.randint(1, int(1e6)))
 parser.add_argument("-fd", "--full_dataset", help="Whether to use full dataset", action='store_true')
@@ -134,7 +134,7 @@ for i in range(min_id, max_id + 1):
         save_image(torch.clamp(aaa, 0, 1).to('cpu'),args.logdir + f'/test.png')
         threshold = 0.5
 
-        mask = (img_recon_mean - 4 * img_recon_std > img) | (img_recon_mean + 4 * img_recon_std < img)
+        mask = (img_recon_mean - 3 * img_recon_std > img) | (img_recon_mean + 3 * img_recon_std < img)
 
         # Creating an empty tensor with the same shape as img, but with the same number of channels as img
         masked_img = torch.zeros_like(img[0:1, ...])
