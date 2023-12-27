@@ -6,15 +6,15 @@ import os
 import random
 import torch
 import util
-from siren_copy import Siren
+from siren import Siren
 from torchvision import transforms
 from torchvision.utils import save_image
 from training import Trainer
-import numpy as np
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-ld", "--logdir", help="Path to save logs", default=f"/tmp/{getpass.getuser()}")
-parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=500)
+parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=50000)
 parser.add_argument("-lr", "--learning_rate", help="Learning rate", type=float, default=2e-4)
 parser.add_argument("-se", "--seed", help="Random seed", type=int, default=random.randint(1, int(1e6)))
 parser.add_argument("-fd", "--full_dataset", help="Whether to use full dataset", action='store_true')
@@ -52,18 +52,14 @@ for i in range(min_id, max_id + 1):
     print(f'Image {i}')
 
     # Load image
-    """
-    img = imageio.imread("/workspace/eunho/BTech_Dataset_transformed/01/test/ok/0000.bmp")
+    img = imageio.imread(f"kodak-dataset/kodim{str(i).zfill(2)}.png")
     img = transforms.ToTensor()(img).float().to(device, dtype)
-    img_ano = imageio.imread("/workspace/eunho/BTech_Dataset_transformed/01/test/ko/0000.bmp")
-    img_ano = transforms.ToTensor()(img_ano).float().to(device, dtype)
-    img_ano
-    """
+
     # Setup model
     func_rep = Siren(
         dim_in=2,
         dim_hidden=args.layer_size,
-        dim_out=6,
+        dim_out=3,
         num_layers=args.num_layers,
         final_activation=torch.nn.Identity(),
         w0_initial=args.w0_initial,
@@ -72,30 +68,9 @@ for i in range(min_id, max_id + 1):
 
     # Set up training
     trainer = Trainer(func_rep, lr=args.learning_rate)
-    img_list = []
-    for j in range(100):
-        if j < 100:
-            num = j+100
-            img = imageio.imread(f"/workspace/eunho/BTech_Dataset_transformed/01/train/ok/{num:04d}.bmp")
-            img = transforms.ToTensor()(img).float().to(device, dtype)
-            img_list.append(img)
-    c_list = []
-    f_list = []
-    for j in img_list:
-        coordinates, features = util.to_coordinates_and_features(j)
-        coordinates, features = coordinates.to(device, dtype), features.to(device, dtype)
-        c_list.append(coordinates)
-        f_list.append(features)
-    print(f_list[0].size())
-    f_tensor = torch.stack(f_list)
-    print(f_tensor.size())
-    mean = torch.mean(f_tensor, dim=0)
-    std = torch.std(f_tensor, dim=0)
+    coordinates, features = util.to_coordinates_and_features(img)
+    coordinates, features = coordinates.to(device, dtype), features.to(device, dtype)
 
-    print('평균:', mean, mean.size())
-    print('표준편차:', std, std.size())
-    result = torch.cat((mean, std), dim=1)
-    print('결과:', result.size())
     # Calculate model size. Divide by 8000 to go from bits to kB
     model_size = util.model_size_in_bits(func_rep) / 8000.
     print(f'Model size: {model_size:.1f}kB')
@@ -103,7 +78,7 @@ for i in range(min_id, max_id + 1):
     print(f'Full precision bpp: {fp_bpp:.2f}')
 
     # Train model in full precision
-    trainer.train(c_list, f_list, num_iters=args.num_iters)
+    trainer.train(coordinates, features, num_iters=args.num_iters)
     print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
 
     # Log full precision results
@@ -117,40 +92,12 @@ for i in range(min_id, max_id + 1):
     func_rep.load_state_dict(trainer.best_model)
 
     # Save full precision image reconstruction
-
     with torch.no_grad():
-        img = imageio.imread("/workspace/eunho/BTech_Dataset_transformed/01/test/ko/0000.bmp")
-        img = transforms.ToTensor()(img).float().to(device, dtype)
-        c, f = util.to_coordinates_and_features(img)
-        c, f = c.to(device, dtype), f.to(device, dtype)
-        print(img.size())
-        img_recon= func_rep(c)
-        img_recon_mean, img_recon_std = torch.split(img_recon, 3, dim=1)
-        print(img_recon_mean.size(),img_recon_std.size())
-        img_recon_mean = img_recon_mean.reshape(3, 1600, 1600)
-        img_recon_std = img_recon_std.reshape(3, 1600, 1600)
-        save_image(torch.clamp(img_recon_mean,0,1).to('cpu'), args.logdir + f'/test_re.png')
-        aaa = img_recon_mean - img_recon_std
-        save_image(torch.clamp(aaa, 0, 1).to('cpu'),args.logdir + f'/test.png')
-        threshold = 0.5
+        img_recon = func_rep(coordinates).reshape(img.shape[1], img.shape[2], 3).permute(2, 0, 1)
+        save_image(torch.clamp(img_recon, 0, 1).to('cpu'), args.logdir + f'/fp_reconstruction_{i}.png')
 
-        mask = (img_recon_mean - 3 * img_recon_std > img) | (img_recon_mean + 3 * img_recon_std < img)
-
-        # Creating an empty tensor with the same shape as img, but with the same number of channels as img
-        masked_img = torch.zeros_like(img[0:1, ...])
-
-        # Filling the masked_img tensor with values based on the mask
-        masked_img[0, mask[0, ...]] = 1.0  # You can adjust the value based on your requirement
-
-        # Saving the masked_img'
-        print(masked_img.size(),"-----")
-        save_image(masked_img.to('cpu'), args.logdir + f'/masked_image.png')
-        #mask = np.where(aaa > threshold, 1., 0.)
-        #masked_img = torch.where(mask, torch.tensor(1.0), torch.tensor(0.0))
-        #save_image(torch.clamp(masked_img, 0, 1).to('cpu'),args.logdir + f'/test_mask.png')
     # Convert model and coordinates to half precision. Note that half precision
     # torch.sin is only implemented on GPU, so must use cuda
-    """
     if torch.cuda.is_available():
         func_rep = func_rep.half().to('cuda')
         coordinates = coordinates.half().to('cuda')
@@ -170,9 +117,9 @@ for i in range(min_id, max_id + 1):
     else:
         results['hp_bpp'].append(fp_bpp)
         results['hp_psnr'].append(0.0)
-    """
+
     # Save logs for individual image
-    with open(args.logdir + f'/logs_re.json', 'w') as f:
+    with open(args.logdir + f'/logs{i}.json', 'w') as f:
         json.dump(trainer.logs, f)
 
     print('\n')
@@ -189,19 +136,4 @@ with open(args.logdir + f'/results_mean.json', 'w') as f:
 
 print('Aggregate results:')
 print(f'Full precision, bpp: {results_mean["fp_bpp"]:.2f}, psnr: {results_mean["fp_psnr"]:.2f}')
-
-from sklearn.metrics import roc_auc_score
-import numpy as np
-
-# Assuming ground_truth is a binary tensor with the same shape as img
-# Convert ground_truth to a 1D array
-ground_truth_flat = imageio.imread("/workspace/eunho/BTech_Dataset_transformed/01/ground_truth/ko/0000.png")
-ground_truth_flat = ground_truth_flat.flatten()
-
-# Threshold the masked_img to create a binary prediction
-thresholded_masked_img = (masked_img.to('cpu') > threshold).view(-1).numpy()
-print(ground_truth_flat.shape,thresholded_masked_img.shape)
-# Calculate AUROC
-auroc = roc_auc_score(ground_truth_flat, thresholded_masked_img)
-
-print(f"Segmentation AUROC: {auroc}")
+print(f'Half precision, bpp: {results_mean["hp_bpp"]:.2f}, psnr: {results_mean["hp_psnr"]:.2f}')
